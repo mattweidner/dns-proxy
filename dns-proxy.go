@@ -36,6 +36,8 @@ import (
 
 var listenPort string = "53"
 var resolver string = "192.168.0.1:53"
+var version string = "1.0"
+
 
 func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net.UDPAddr, buffer []byte, bn int) {
 	defer resolverConn.Close()
@@ -114,6 +116,8 @@ func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net
 
 func main() {
 	log.SetOutput(os.Stdout)
+	log.Println("dns-proxy", version, " <matt.weidner@gmail.com>")
+	log.Println("Started.")
 	listenerAddr,err := net.ResolveUDPAddr("udp", ":"+listenPort)
 	if err != nil {
 		log.Println("Error resolving listener addr.")

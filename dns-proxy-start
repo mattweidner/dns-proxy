@@ -1,0 +1,12 @@
+#!/bin/bash
+NOW=`date +"%m%d%Y-%H%M%S"`
+echo $NOW
+LOGFILE="/var/log/dnsproxy/dnsintercept-$NOW.log"
+if [ -f "$LOGFILE" ]
+then
+	# logfile already exists, append to it. Should rarely happen.
+	/usr/local/bin/dns-proxy >> $LOGFILE &
+else
+	# logfile does not exist, create it.
+	/usr/local/bin/dns-proxy > $LOGFILE &
+fi
