@@ -30,6 +30,7 @@ import (
 	"log"
 	"net"
 	"time"
+	"sync"
 	"strings"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -38,12 +39,13 @@ import (
 var listenPort string = "53"
 var resolver string = "192.168.0.1:53"
 //var resolver string = "199.188.56.200:53"
-var version string = "1.3"
-
+var version string = "1.4"
+var getPoolBuffer = sync.Pool{New: func() interface{} { return make([]byte, 2048) }}
 
 func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net.UDPAddr, buffer []byte, bn int) {
 	defer resolverConn.Close()
-	responseBuffer := make([]byte, 2048)
+	responseBuffer := getPoolBuffer.Get().([]byte)
+	defer getPoolBuffer.Put(responseBuffer)
 	_, err := resolverConn.Write(buffer[0:bn])
 	if err != nil {
 		log.Println("Error writing to resolver", err)
@@ -147,7 +149,7 @@ func main() {
 		log.Println("Resolving resolver ", err)
 		return
 	}
-	buffer := make([]byte, 65535)
+	buffer := make([]byte, 2048)
 	for {
 		n,addr,err := listener.ReadFromUDP(buffer)
 		if err != nil {
