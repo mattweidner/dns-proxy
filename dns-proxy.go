@@ -38,7 +38,6 @@ import (
 
 var listenPort string = "53"
 var resolver string = "192.168.0.1:53"
-//var resolver string = "199.188.56.200:53"
 var version string = "1.4"
 var getPoolBuffer = sync.Pool{New: func() interface{} { return make([]byte, 2048) }}
 
