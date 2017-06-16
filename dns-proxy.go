@@ -67,6 +67,9 @@ func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net
 	for q := range dnsQ.Questions {
 		logMessage = logMessage + fmt.Sprintf("%s ", dnsQ.Questions[q].Name)
 	}
+	if dnsA.ResponseCode == 3 {
+		logMessage = logMessage + "NXDOMAIN "
+	}
 	for q := range dnsA.Answers {
 		if dnsA.Answers[q].IP != nil {
 			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Answers[q].Type, dnsA.Answers[q].IP)
