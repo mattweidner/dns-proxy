@@ -36,7 +36,7 @@ import (
 
 var listenPort string = "53"
 var resolver string = "192.168.0.1:53"
-var version string = "1.0"
+var version string = "1.1"
 
 
 func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net.UDPAddr, buffer []byte, bn int) {
@@ -44,13 +44,13 @@ func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net
 	responseBuffer := make([]byte, 65535)
 	_, err := resolverConn.Write(buffer[0:bn])
 	if err != nil {
-		log.Println("Error writing to resolver ", err)
+		log.Println("Error writing to resolver", err)
 		return
 	}
 	resolverConn.SetReadDeadline(time.Now().Add(8 * time.Second))
 	n, err := resolverConn.Read(responseBuffer)
 	if err != nil {
-		log.Println("Error reading from resolver ", err)
+		log.Println("Error reading from resolver", err)
 		return
 	}
 	n, err = listener.WriteToUDP(responseBuffer[0:n], addr)
@@ -142,7 +142,6 @@ func main() {
 		if err != nil {
 			log.Println("Error reading UDP port", err)
 		}
-		defer listener.Close()
 		resolverConn, err := net.DialUDP("udp", nil, resolverAddr)
 		if err != nil {
 			log.Println("Connecting to resolver ", err)
