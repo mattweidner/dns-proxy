@@ -30,18 +30,20 @@ import (
 	"log"
 	"net"
 	"time"
+	"strings"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
 var listenPort string = "53"
 var resolver string = "192.168.0.1:53"
-var version string = "1.1"
+//var resolver string = "199.188.56.200:53"
+var version string = "1.3"
 
 
 func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net.UDPAddr, buffer []byte, bn int) {
 	defer resolverConn.Close()
-	responseBuffer := make([]byte, 65535)
+	responseBuffer := make([]byte, 2048)
 	_, err := resolverConn.Write(buffer[0:bn])
 	if err != nil {
 		log.Println("Error writing to resolver", err)
@@ -60,61 +62,70 @@ func resolveAndReply(listener *net.UDPConn, resolverConn *net.UDPConn, addr *net
 	var dnsQ layers.DNS
 	var dnsA layers.DNS
 	var df gopacket.DecodeFeedback
-	var logMessage string = ""
+	var logMessage []string
 	dnsQ.DecodeFromBytes(buffer, df)
 	dnsA.DecodeFromBytes(responseBuffer, df)
-	logMessage = logMessage + fmt.Sprintf("%s ", addr.IP)
+	logMessage = append(logMessage, fmt.Sprintf("%s", addr.IP))
 	for q := range dnsQ.Questions {
-		logMessage = logMessage + fmt.Sprintf("%s ", dnsQ.Questions[q].Name)
+		logMessage = append(logMessage ,fmt.Sprintf("%s", dnsQ.Questions[q].Name))
 	}
 	if dnsA.ResponseCode == 3 {
-		logMessage = logMessage + "NXDOMAIN "
+		logMessage = append(logMessage ,"[NXDOMAIN]")
 	}
 	for q := range dnsA.Answers {
 		if dnsA.Answers[q].IP != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Answers[q].Type, dnsA.Answers[q].IP)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Answers[q].Type, dnsA.Answers[q].IP))
 		}
 		if dnsA.Answers[q].MX.Name != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Answers[q].Type, dnsA.Answers[q].MX.Name)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Answers[q].Type, dnsA.Answers[q].MX.Name))
 		}
 	if dnsA.Answers[q].CNAME != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Answers[q].Type, dnsA.Answers[q].CNAME)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Answers[q].Type, dnsA.Answers[q].CNAME))
 		}
 	}
 	for q := range dnsA.Additionals {
 		if dnsA.Additionals[q].IP != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Additionals[q].Type, dnsA.Additionals[q].IP)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Additionals[q].Type, dnsA.Additionals[q].IP))
 		}
 		if dnsA.Additionals[q].MX.Name != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Additionals[q].Type, dnsA.Additionals[q].MX.Name)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Additionals[q].Type, dnsA.Additionals[q].MX.Name))
 		}
 		if dnsA.Additionals[q].CNAME != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Additionals[q].Type, dnsA.Additionals[q].CNAME)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Additionals[q].Type, dnsA.Additionals[q].CNAME))
 		}
 		if dnsA.Additionals[q].PTR != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Additionals[q].Type, dnsA.Additionals[q].PTR)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Additionals[q].Type, dnsA.Additionals[q].PTR))
 		}
-		if dnsA.Additionals[q].TXT != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Additionals[q].Type, dnsA.Additionals[q].TXT)
+		for t := range dnsA.Additionals[q].TXTs {
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Additionals[q].Type, dnsA.Additionals[q].TXTs[t]))
 		}
 	}
 	for q := range dnsA.Authorities {
 		if dnsA.Authorities[q].NS != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Authorities[q].Type, dnsA.Authorities[q].NS)
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Authorities[q].Type, dnsA.Authorities[q].NS))
 		}
-	/*
-		if dnsA.Authorities[q].SOA != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA)
+		if dnsA.Authorities[q].SOA.MName != nil {
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:MNAME:%s]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.MName))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:RNAME:%s]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.RName))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:SERIAL:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.Serial))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:REFRESH:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.Refresh))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:RETRY:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.Retry))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:EXPIRE:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.Expire))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:MIN:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SOA.Minimum))
 		}
-		if dnsA.Authorities[q].SRV != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%s] ", dnsA.Authorities[q].Type, dnsA.Authorities[q].SRV)
+		if dnsA.Authorities[q].SRV.Name != nil {
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SRV.Name))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SRV.Priority))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SRV.Weight))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].SRV.Port))
 		}
-		if dnsA.Authorities[q].MX != nil {
-			logMessage = logMessage + fmt.Sprintf("[%s:%v] ", dnsA.Authorities[q].Type, dnsA.Authorities[q].MX)
+		if dnsA.Authorities[q].MX.Name != nil {
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%s]", dnsA.Authorities[q].Type, dnsA.Authorities[q].MX.Name))
+			logMessage = append(logMessage ,fmt.Sprintf("[%s:%d]", dnsA.Authorities[q].Type, dnsA.Authorities[q].MX.Preference))
 		}
-	*/
 	}
-	log.Println(logMessage)
+	logString := strings.Join(logMessage, " ")
+	log.Println(logString)
 }
 
 func main() {
